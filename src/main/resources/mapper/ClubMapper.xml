@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "//mybatis.org/DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.together.springStudy.mapper.ClubMapper">
+
+    <resultMap id="ClubListDataMap" type="com.together.springStudy.model.ClubListData">
+        <id column="club_id" property="clubId"/>
+        <result column="club_leader_id" property="clubLeaderId"/>
+        <result column="club_board_id" property="clubBoardId"/>
+        <result column="club_name" property="clubName"/>
+        <result column="club_description" property="clubDescription"/>
+        <result column="club_master_nickname" property="clubMasterNickname"/>
+        <result column="club_member_count" property="clubMemberCount"/>
+    </resultMap>
+
+    <resultMap id="ClubJoinQueueMap" type="com.together.springStudy.model.ClubJoinQueueData">
+        <id column="join_queue_id" property="joinQueueId"/>
+        <result column="join_user_id" property="joinUserId"/>
+        <result column="join_club_id" property="joinClubId"/>
+        <result column="join_content" property="joinContent"/>
+        <result column="user_nickname" property="userNickname"/>
+    </resultMap>
+
+
+    <resultMap id="ClubMemberDataMap" type="com.together.springStudy.model.ClubMemberData">
+        <id column="user_nickname" property="userNickname"/>
+    </resultMap>
+
+    <select id="getAllClub" resultMap="ClubListDataMap">
+        SELECT
+            *,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_data.user_id = club_data.club_leader_id) as club_master_nickname,
+            (SELECT
+                count(*)
+            FROM
+                club_member
+            WHERE
+                club_member.member_club_id = club_data.club_id) as club_member_count
+        FROM
+            club_data
+    </select>
+
+    <select id="getClubByPrimaryKey" resultType="com.together.springStudy.model.ClubData">
+        SELECT
+            *
+        FROM
+            club_data
+        WHERE
+            club_id = #{clubId}
+    </select>
+
+    <select id="getJoinClubQueueByUserIdAndClubId" parameterType="com.together.springStudy.model.ClubJoinQueue" resultType="com.together.springStudy.model.ClubJoinQueue">
+        SELECT
+            *
+        FROM
+            club_join_queue
+        WHERE
+            join_user_id = #{joinUserId}
+            AND
+            join_club_id = #{joinClubId}
+            AND
+            join_state != 2
+    </select>
+
+    <select id="getJoinClubQueue" resultMap="ClubJoinQueueMap">
+        SELECT
+            club_join_queue.*, user_data.user_nickname
+        FROM
+            club_join_queue
+        LEFT JOIN
+            user_data
+        ON
+            user_id = join_user_id
+        WHERE
+            join_club_id = #{clubId}
+    </select>
+
+    <select id="getClubMemberByClubId" resultMap="ClubMemberDataMap">
+        SELECT
+            user_data.user_nickname
+        FROM
+            club_member
+        INNER JOIN
+            user_data ON
+            club_member.member_user_id = user_data.user_id
+        WHERE
+            club_member.member_club_id = #{clubId}
+        ORDER BY
+            user_data.user_name;
+    </select>
+
+    <select id="getClubForKeyword" parameterType="com.together.springStudy.model.Keyword" resultMap="ClubListDataMap">
+        SELECT
+            *,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_data.user_id = club_data.club_leader_id) as club_master_nickname,
+            (SELECT
+                count(*)
+            FROM
+                club_member
+            WHERE
+                club_member.member_club_id = club_data.club_id) as club_member_count
+        FROM
+            club_data
+        <where>
+            <if test="keyword != null">
+                club_name like concat('%', #{keyword}, '%')
+                OR
+                club_description like concat('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="getAffiliatedClub" resultMap="ClubListDataMap">
+        SELECT
+            club_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_data.user_id = club_data.club_leader_id) as club_master_nickname,
+            (SELECT
+                count(*)
+            FROM
+                club_member
+            WHERE
+                club_member.member_club_id = club_data.club_id) as club_member_count
+        FROM
+            club_data
+        INNER JOIN
+            club_member ON
+            club_data.club_id = club_member.member_club_id
+        WHERE
+            club_member.member_user_id = #{userId}
+    </select>
+
+    <select id="getClubByClubName" resultType="com.together.springStudy.model.ClubData">
+        SELECT
+            club_name
+        FROM
+            club_data
+        WHERE
+            club_name = #{clubName}
+    </select>
+
+    <select id="getLastClubId" resultType="com.together.springStudy.model.ClubId">
+        SELECT
+            club_id
+        FROM
+            club_data
+        ORDER BY
+            club_id DESC
+        LIMIT
+            1
+    </select>
+
+    <select id="getClubByIdAndLeader" parameterType="com.together.springStudy.model.ClubData" resultType="com.together.springStudy.model.ClubData">
+        SELECT
+            *
+        FROM
+            club_data
+        WHERE
+            club_id = #{clubId}
+            AND
+            club_leader_id = #{clubLeaderId}
+    </select>
+
+    <insert id="createClub" parameterType="com.together.springStudy.model.ClubData">
+        <selectKey resultType="int" keyProperty="clubId" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        INSERT INTO
+            club_data
+            (club_leader_id, club_name, club_description, club_board_id)
+        VALUES
+            (#{clubLeaderId}, #{clubName}, #{clubDescription}, #{clubBoardId})
+    </insert>
+    <insert id="createClubMaster" parameterType="com.together.springStudy.model.ClubMember">
+        INSERT INTO
+            club_member
+            (member_user_id, member_club_id, member_permission)
+        VALUES
+            (#{memberUserId}, #{memberClubId}, #{memberPermission})
+    </insert>
+
+    <insert id="joinClub" parameterType="com.together.springStudy.model.ClubJoinQueue">
+        INSERT INTO
+            club_join_queue
+            (join_user_id, join_club_id)
+        VALUES
+            (#{joinUserId}, #{joinClubId})
+    </insert>
+    
+    <insert id="joinClubApproval" parameterType="com.together.springStudy.model.ClubJoinQueue">
+        INSERT INTO
+            club_member
+            (member_user_id, member_club_id)
+        VALUES
+            (#{joinUserId}, #{joinClubId})
+    </insert>
+    <update id="updateJoinClubApproval">
+        UPDATE
+            club_join_queue
+        SET
+            join_state = 1
+        WHERE
+            join_queue_id = #{joinQueueId}
+    </update>
+
+    <update id="joinClubRefusal" parameterType="com.together.springStudy.model.ClubJoinQueue">
+        UPDATE
+            club_join_queue
+        SET
+            join_state = 2
+        WHERE
+            join_queue_id = #{joinQueueId}
+    </update>
+
+    <update id="updateClubRecruiting" parameterType="com.together.springStudy.model.ClubData">
+        UPDATE
+            club_data
+        SET
+            club_recruiting = #{clubRecruiting}
+        WHERE
+            club_id = #{clubId}
+    </update>
+
+    <update id="updateClubDescription" parameterType="com.together.springStudy.model.ClubData">
+        UPDATE
+            club_data
+        SET
+            club_description = #{clubDescription}
+        WHERE
+            club_id = #{clubId}
+            AND
+            club_leader_id = #{clubLeaderId}
+    </update>
+
+
+<!--    <insert id="joinClub" parameterType="com.together.springStudy.model.ClubJoinQueue">-->
+<!--        INSERT INTO-->
+<!--            club_join_queue-->
+<!--            (join_user_id, join_club_id, join_content)-->
+<!--        VALUES-->
+<!--            (#{joinUserId, #{joinClubId}, #{joinContent})-->
+<!--    </insert>-->
+
+    <delete id="deleteClubBoard" parameterType="com.together.springStudy.model.ClubData">
+        DELETE FROM
+        board_data
+        WHERE
+        board_id = #{clubBoardId}
+    </delete>
+    <delete id="deleteAllClubMember" parameterType="com.together.springStudy.model.ClubData">
+        DELETE FROM
+            club_member
+        WHERE
+            member_club_id = #{clubId}
+    </delete>
+    <delete id="deleteClub" parameterType="com.together.springStudy.model.ClubData">
+        DELETE FROM
+            club_data
+        WHERE
+            club_id = #{clubId}
+            AND
+            club_leader_id = #{clubLeaderId}
+    </delete>
+
+    <delete id="withdrawalClub" parameterType="com.together.springStudy.model.ClubMember">
+        DELETE FROM
+            club_member
+        WHERE
+            member_club_id = #{memberClubId}
+            AND
+            member_user_id = #{memberUserId}
+    </delete>
+    <delete id="deleteQueue" parameterType="com.together.springStudy.model.ClubMember">
+        DELETE FROM
+            club_join_queue
+        WHERE
+            join_user_id = #{memberUserId}
+            AND
+            join_club_id = #{memberClubId}
+    </delete>
+
+</mapper>

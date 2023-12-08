@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "//mybatis.org/DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.together.springStudy.mapper.PostMapper">
+
+    <resultMap id="PostMainMap" type="com.together.springStudy.model.PostMainData">
+        <id column="post_id" property="postId"/>
+        <result column="post_board_id" property="postBoardId"/>
+        <result column="post_user_id" property="postUserId"/>
+        <result column="post_title" property="postTitle"/>
+        <result column="post_content" property="postContent"/>
+        <result column="post_tag" property="postTag"/>
+        <result column="post_creation_date" property="postCreationDate"/>
+        <result column="user_nickname" property="userNickname"/>
+        <result column="post_comment_count" property="postCommentCount"/>
+        <result column="post_like_count" property="postLikeCount"/>
+        <result column="post_like_id" property="postLikeId"/>
+    </resultMap>
+
+    <resultMap id="PostCommentDataMap" type="com.together.springStudy.model.PostCommentData">
+        <id column="comment_id" property="commentId"/>
+        <result column="comment_user_id" property="commentUserId"/>
+        <result column="comment_post_id" property="commentPostId"/>
+        <result column="comment_parentnum" property="commentParentnum"/>
+        <result column="comment_content" property="commentContent"/>
+        <result column="user_nickname" property="userNickname"/>
+    </resultMap>
+    
+    <resultMap id="ImageMap" type="hashMap">
+        <id column="idx" property="idx"/>
+        <result column="image" property="image" jdbcType="BLOB" javaType="byte[]" />
+    </resultMap>
+
+    <select id="getAllPost">
+        SELECT
+            *
+        FROM
+            post_data
+    </select>
+
+    <select id="getLastNoticeDate" resultType="com.together.springStudy.model.PostMainData">
+        SELECT
+            *
+        FROM
+            posts_data
+        WHERE
+            post_board_id = 1
+        ORDER BY
+            post_creation_date desc
+        LIMIT
+            1
+    </select>
+
+    <select id="getAllPostForMain" resultMap="PostMainMap">
+        SELECT
+            posts_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_id = posts_data.post_user_id) as user_nickname,
+            (SELECT
+                count(*)
+            FROM
+                post_comment
+            WHERE
+                comment_post_id = posts_data.post_id) as post_comment_count,
+            (SELECT
+                count(*)
+            FROM
+                post_like
+            WHERE
+                like_post_id = posts_data.post_id) as post_like_count,
+            post_like.like_id as post_like_id
+        FROM
+            posts_data
+        LEFT JOIN
+            post_like ON
+            posts_data.post_id = post_like.like_post_id
+        AND
+            post_like.like_user_id = #{userId}
+        ORDER BY
+            post_creation_date desc
+    </select>
+
+    <select id="getPostByPrimaryKey" resultType="com.together.springStudy.model.PostMainData">
+        SELECT
+            posts_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_id = posts_data.post_user_id) as user_nickname,
+            (SELECT
+                count(*)
+            FROM
+                post_comment
+            WHERE
+                comment_post_id = posts_data.post_id) as post_comment_count,
+            (SELECT
+                count(*)
+            FROM
+                post_like
+            WHERE
+                like_post_id = posts_data.post_id) as post_like_count,
+            post_like.like_id as post_like_id
+        FROM
+            posts_data
+        LEFT JOIN
+            post_like ON
+            posts_data.post_id = post_like.like_post_id
+        AND
+            post_like.like_user_id = #{userId}
+        WHERE
+            posts_data.post_id = #{postId}
+        ORDER BY
+            post_creation_date desc
+    </select>
+
+    <select id="getPostForKeyword" parameterType="com.together.springStudy.model.Keyword" resultMap="PostMainMap">
+        SELECT
+            posts_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+            user_id = posts_data.post_user_id) as user_nickname,
+            (SELECT
+                count(*)
+            FROM
+                post_comment
+            WHERE
+                comment_post_id = posts_data.post_id) as post_comment_count,
+            (SELECT
+                count(*)
+            FROM
+                post_like
+            WHERE
+                like_post_id = posts_data.post_id) as post_like_count,
+            post_like.like_id as post_like_id
+        FROM
+            posts_data
+        LEFT JOIN
+            post_like ON
+            posts_data.post_id = post_like.like_post_id
+        AND
+            post_like.like_user_id = #{userId}
+        <where>
+            <if test="keyword != null">
+                posts_data.post_title like concat('%', #{keyword}, '%')
+                OR
+                posts_data.post_content like concat('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY
+            post_creation_date desc
+    </select>
+
+    <select id="getBoardIdByClubId" resultType="com.together.springStudy.model.BoardId">
+        SELECT
+            club_board_id as board_id
+        FROM
+            club_data
+        WHERE
+            club_id = #{clubId}
+        LIMIT
+            1
+    </select>
+
+    <select id="getPostsByUserId" resultMap="PostMainMap">
+        SELECT
+            posts_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_id = posts_data.post_user_id) as user_nickname,
+            (SELECT
+                count(*)
+            FROM
+                post_comment
+            WHERE
+                comment_post_id = posts_data.post_id) as post_comment_count,
+            (SELECT
+                count(*)
+            FROM
+                post_like
+            WHERE
+                like_post_id = posts_data.post_id) as post_like_count,
+            post_like.like_id as post_like_id
+        FROM
+            posts_data
+        LEFT JOIN
+            post_like ON
+            posts_data.post_id = post_like.like_post_id
+        AND
+            post_like.like_user_id = #{userId}
+        WHERE
+            posts_data.post_user_id = #{userId}
+        ORDER BY
+            post_creation_date desc
+    </select>
+
+    <select id="getPostByBoardId" resultMap="PostMainMap">
+        SELECT
+            posts_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_id = posts_data.post_user_id) as user_nickname,
+            (SELECT
+                count(*)
+            FROM
+                post_comment
+            WHERE
+                comment_post_id = posts_data.post_id) as post_comment_count,
+            (SELECT
+                count(*)
+            FROM
+                post_like
+            WHERE
+                like_post_id = posts_data.post_id) as post_like_count,
+            post_like.like_id as post_like_id
+        FROM
+            posts_data
+        LEFT JOIN
+            post_like ON
+            posts_data.post_id = post_like.like_post_id
+        AND
+            post_like.like_user_id = #{userId}
+        WHERE
+            posts_data.post_board_id = #{boardId}
+        ORDER BY
+            post_creation_date desc
+    </select>
+
+    <select id="getAllCommentByPostId" resultMap="PostCommentDataMap">
+        SELECT
+            post_comment.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_id = post_comment.comment_user_id) as user_nickname
+        FROM
+            post_comment
+        WHERE
+            post_comment.comment_post_id = #{postId}
+        ORDER BY
+            comment_creation_date desc
+    </select>
+
+
+
+    <select id="getClubPostCreatedByUser" resultMap="PostMainMap">
+        SELECT
+            posts_data.*,
+            (SELECT
+                user_nickname
+            FROM
+                user_data
+            WHERE
+                user_id = posts_data.post_user_id) as user_nickname,
+            (SELECT
+                count(*)
+            FROM
+                post_comment
+            WHERE
+                comment_post_id = posts_data.post_id) as post_comment_count,
+            (SELECT
+                count(*)
+            FROM
+                post_like
+            WHERE
+                like_post_id = posts_data.post_id) as post_like_count,
+            post_like.like_id as post_like_id
+        FROM
+            posts_data
+        LEFT JOIN
+            post_like ON
+            posts_data.post_id = post_like.like_post_id
+            AND
+            post_like.like_user_id = #{userId}
+        WHERE
+            posts_data.post_board_id > 20
+            AND
+            posts_data.post_user_id = #{userId}
+        ORDER BY
+            post_creation_date desc
+    </select>
+
+    <select id="getPostLike" resultType="com.together.springStudy.model.PostLike">
+        SELECT
+            *
+        FROM
+            post_like
+        WHERE
+            like_post_id = #{likePostId}
+            AND
+            like_user_id = #{likeUserId}
+    </select>
+
+    <select id="getImageByPrimaryKey" resultMap="ImageMap">
+        SELECT
+            *
+        FROM
+            test_blob
+        WHERE
+            idx = #{idx}
+    </select>
+
+
+    <insert id="createBoardData" parameterType="com.together.springStudy.model.BoardData">
+        INSERT INTO
+            board_data
+            (board_id, board_name, board_description, board_type)
+        VALUES
+            (#{boardId}, #{boardName}, #{boardDescription}, #{boardType})
+    </insert>
+
+    <insert id="createPost" parameterType="com.together.springStudy.model.PostsData">
+        INSERT INTO
+            posts_data
+            (post_board_id, post_user_id, post_title, post_content, post_creation_date)
+        VALUES
+            (#{postBoardId}, #{postUserId}, #{postTitle}, #{postContent}, #{postCreationDate})
+    </insert>
+
+    <insert id="createComment" parameterType="com.together.springStudy.model.PostComment">
+        INSERT INTO
+            post_comment
+            (comment_user_id, comment_post_id, comment_content)
+        VALUES
+            (#{commentUserId}, #{commentPostId}, #{commentContent})
+    </insert>
+    <insert id="createReply" parameterType="com.together.springStudy.model.PostComment">
+        INSERT INTO
+            post_comment
+            (comment_user_id, comment_post_id, comment_parentnum, comment_content)
+        VALUES
+            (#{commentUserId}, #{commentPostId},#{commentParentnum}, #{commentContent})
+    </insert>
+
+    <insert id="createLike" parameterType="com.together.springStudy.model.PostLike">
+        INSERT INTO
+            post_like
+            (like_user_id, like_post_id)
+        VALUES
+            (#{likeUserId}, #{likePostId})
+    </insert>
+
+    <insert id="createPostImages" parameterType="com.together.springStudy.model.PostImages">
+        INSERT INTO
+            post_images
+            (post_image_user_id, post_image_parentnum, post_image_src)
+        VALUES
+            (#{postImageUserId}, #{postImageParentnum}, #{postImageSrc})
+    </insert>
+
+    <update id="updatePostByPostId" parameterType="com.together.springStudy.model.PostsData">
+        UPDATE
+            posts_data
+        SET
+            post_title = #{postTitle},
+            post_content = #{postContent}
+        WHERE
+            post_id = #{postId}
+            AND
+            post_user_id = #{postUserId}
+    </update>
+
+
+
+    <delete id="deleteLike" parameterType="com.together.springStudy.model.PostLike">
+        DELETE FROM
+            post_like
+        WHERE
+            like_post_id = #{likePostId}
+            AND
+            like_user_id = #{likeUserId}
+    </delete>
+
+    <delete id="deleteChildComment" parameterType="com.together.springStudy.model.PostComment">
+        DELETE FROM
+            post_comment
+        WHERE
+            comment_parentnum = #{commentId}
+    </delete>
+    <delete id="deleteCommentByCommentId" parameterType="com.together.springStudy.model.PostComment">
+        DELETE FROM
+            post_comment
+        WHERE
+            comment_id = #{commentId}
+            AND
+            comment_user_id = #{commentUserId}
+    </delete>
+
+    <delete id="deleteLikeByPostId" parameterType="com.together.springStudy.model.PostsData">
+        DELETE FROM
+            post_like
+        WHERE
+            like_post_id = #{postId}
+    </delete>
+    <delete id="deleteCommentByPostId" parameterType="com.together.springStudy.model.PostsData">
+        DELETE FROM
+            post_comment
+        WHERE
+            comment_post_id = #{postId}
+    </delete>
+    <delete id="deletePost" parameterType="com.together.springStudy.model.PostsData">
+        DELETE FROM
+            posts_data
+        WHERE
+            post_id = #{postId}
+            AND
+            post_user_id = #{postUserId}
+    </delete>
+
+</mapper>
