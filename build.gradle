@@ -24,6 +24,7 @@ dependencies {
 //	Spring
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:2.3.0'
+	implementation 'org.apache.tomcat:tomcat-jdbc'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 //	lombok
 	compileOnly 'org.projectlombok:lombok'
